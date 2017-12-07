@@ -1,0 +1,1 @@
+magick -compress zip -density 200x200 %1 %2

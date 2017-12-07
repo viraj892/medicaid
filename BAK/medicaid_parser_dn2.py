@@ -1,0 +1,261 @@
+import cx_Oracle
+import mysql.connector
+import datetime
+import csv
+import sys
+import re
+import string
+import itertools
+import os
+
+print datetime.datetime.now()
+
+con = mysql.connector.connect(user='root', password='ncsuball', host='127.0.0.1', database='medicaid')
+cursor = con.cursor()
+
+inv_qtr = ''
+ptype = ''
+inv_num = ''
+util_qtr = ''
+
+qmap = {'01':'1','02':'1','03':'1','04':'2','05':'2','06':'2','07':'3','08':'3','09':'3','10':'4','11':'4','12':'4'}
+
+test_list = {
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_KS_MMCO_Invoice.txt':'KS_MMCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_MD_MMCO_Invoice.txt':'MD_MMCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_MD_MMCOEXP_Invoice.txt':'MD_MMCOEXP',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_MD_CHIPMCO_Invoice.txt':'MD_CHIPMCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_67877_NY_MEDI_Invoice.txt':'NY_MEDI',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_NY_MEDI_Invoice.txt':'NY_MEDI',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_NY_MMCO_Invoice.txt':'NY_MMCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_67877_NY_MMCO_Invoice_600.txt':'NY_MMCO',
+#
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_PA_MMCO_Invoice.txt':'PA_MMCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_OH_MEDI_Invoice.txt':'OH_MEDI',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_67877_WV_MMCO_Invoice.txt':'WV_MMCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_67877_WV_MEDI_Invoice.txt':'WV_MEDI',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_67877_NY_MMCO_Invoice.txt':'NY_MMCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_42192_MI_MCCO_Invoice.txt':'MI_MCCO',
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_67877_ND_MEDI_Invoice.txt':'ND_MEDI',
+'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_64597_VA_MEDI_Invoice.txt':'VA_MEDI'
+#'F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\3 - raw_text\\2017Q1_64597_NY_MEDI_Invoice.txt':'NY_MEDI'
+}
+
+inv_qtr = '2017Q1'
+
+for k, v in test_list.iteritems():
+        errors = []
+        human = []
+        cms = []
+        mco_lookup = ['MCO','Managed']
+        ffs_lookup = ['FFS','MEDI']
+        cmsd = {}
+        logic = {}
+        file = k
+        key = v
+        year = ''
+        quarter = ''
+
+        length = 5
+        pattern= r"\D(\d{%d})\D" % length
+        labeler_extract = re.findall(pattern, file)
+        file_labeler = labeler_extract[0]
+        labeler = file_labeler
+        #print file
+        #print file_labeler
+        
+        # DN - using  os.path to get base filename.  From there, can get Inv Quarter, Program key (to be done later)
+        base_filename = os.path.basename(file)
+        #print base_filename
+        
+        querystring = ("SELECT * FROM invoice_logic il LEFT JOIN invoice_types it ON il.invoice_type = it.id WHERE il.`key` = '%s'")%key
+        cursor.execute(querystring)
+        #print key
+        
+        field_names = [d[0].lower() for d in cursor.description]
+        rows = cursor.fetchmany()
+        for row in rows:
+                logic.update(dict(itertools.izip(field_names, row)))
+
+        lines = open(file).read().splitlines()
+
+        row = 0
+
+        state = str(logic['state'])
+        type = str(logic['type'])
+        std_type = str(logic['std_type'])
+        rtype = std_type
+
+        for r in lines:
+		
+                row += 1
+                try:
+                        #row cleanup and garbage removal
+                        r = r.upper()
+                        for x in logic['garbage'].split('|'):
+                                r = r.replace(str(x),'')
+                        
+                        #identification of invoice number
+                        if not inv_num:
+                                if logic['inv_num'] in r:
+                                        info = r.split(logic['inv_num'])
+                                        inv_num = info[1].strip(' ')
+                                        #~ print inv_num
+
+                        #identification of invoice type if differs from type derived from file_name
+                        for x in mco_lookup:
+                                if x in r:
+                                        ptype = 'MMCO'
+                        for x in ffs_lookup:
+                                if x in r:
+                                        ptype = 'FFSU'
+                        if ptype <> rtype:
+                                rtype = ptype
+
+                        #identification of submission/invoice quarter
+                        #~ if r.startswith(logic['inv_qtr']):
+                                #~ info = r.split(':')
+                                #~ info = info[1].strip().split('/')
+                                #~ inv_qtr = info[0]+info[1]
+                                #~ qtr = info[1]+"Q"+info[0]
+                                #~ util_qtr = inv_qtr
+                        
+                        #identification of billing quarter
+                        for x in logic['period_covered'].split('|'):
+                                if x in r:
+                                        print r
+                                        if logic['period_type'] == '#QYYYY':
+                                                info = r.split(str(logic['period_covered'])+': ')
+                                                util_qtr = info[1][:1]+info[1][2:7]
+                                        elif logic['period_type'] == '#/YYYY':
+                                                info = r.split(str(logic['period_covered'])+': ')
+                                                util_qtr = info[1][:1]+info[1][2:7]
+                                        elif logic['period_type'] == 'MM/DD/YY':
+                                                info = r.split(str(logic['period_covered'])+': ')
+                                                util_qtr = qmap[info[1][:2]]+'20'+info[1][6:8]
+                                        elif logic['period_type'] == 'YYYYbreakQ':
+                                                info = r.split(str(x)+' ')
+                                                if x == 'YEAR':
+                                                        year = info[1][:4]
+                                                elif x == 'QTR':
+                                                        quarter = info[1][:1]
+                                        #print util_qtr
+                                        
+                        if (logic['period_type'] == 'YYYYbreakQ' and year != '' and quarter != ''):
+                                util_qtr = quarter+year
+                        
+                        #if billing quarter is not listed in the file, default to invoice quarter
+                        if not util_qtr:
+                                util_qtr = inv_qtr[5:6]+inv_qtr[:4]
+                        
+                        length = int(logic['ura_length'])
+                        pattern= r"\D(\d{%d})\D" % length
+                        inv_detail_check = re.findall(pattern, r)
+                        
+                        detail = 'n'
+                        
+                        #dynamically inserts python logic to identify invoice line item detail based on the invoice type which is defined in the medicaid->invoice_types table
+                        exec(logic['code_line_id'])
+                                
+                        if detail == 'y':
+                                #~ print r
+                                #add labeler code for invoices that only include product code and size
+                                if not r[:5].isdigit():
+                                        r = file_labeler+'-'+ r
+                                
+                                #check for dashes and add if necesssary
+                                
+                                #remove spaces in ndc area
+                                exec(logic['code_ndc_area'])
+                                r = r.replace(ndc_area,ndc_area.replace(' ',''))
+                                
+                                print r
+                                
+                                #identifies product name start position with first space
+                                start = r.index(' ')
+                        
+                                #identifies product name ending position with key character fed in from database - removes product name from line
+                                ura_string = re.findall(pattern, r)
+                                end = r.index(ura_string[0])-3
+                                r = r.replace(r[start:end],'')
+                
+                                r = re.sub("[^0-9\d.\-\s]", "", r)
+                                r = r.replace('  ',' ')
+                                r = r.replace('  ',' ')
+                                #DN - replace any single dot, i.e. led and followed by space with just space
+                                r=r.replace(' . ',' ')
+                
+                                #print r
+                                
+                                info = r.split(' ')
+                                #~ print  info
+                                ndc = info[int(logic['ndc'])].replace('-','')
+                                #~ print ndc
+                                labeler = ndc[:5]
+                                #~ print labeler
+                                prod = ndc[5:9]
+                                #~ print prod
+                                size = ndc[9:11]
+                                #~ print size
+                                name = str("          ")
+                                ura = str("%012.6f"%float(info[int(logic['ura'])]))
+                                #~ print ura
+                                units = str("%015.3f"%float(info[int(logic['units'])]))
+                                #~ print units
+                                claimed = str("%012.2f"%float(info[int(logic['claimed'])]))
+                                #~ print claimed
+                                scripts = str("%08.0f"%float(info[int(logic['scripts'])]))
+                                #~ print scripts
+                                medi_reimb = str("%013.2f"%float(info[int(logic['medi_reimb'])]))
+                                #~ print medi_reimb
+                                non_medi_reimb = str("%013.2f"%float(info[int(logic['non_medi_reimb'])]))
+                                #~ print non_medi_reimb
+                                total_reimb = str("%014.2f"%float(info[int(logic['total_reimb'])]))
+                                #~ print total_reimb
+                                #~ print state,type,r
+                                if logic['corr_flag']:
+                                        corr_flag = info[int(logic['corr_flag'])]
+                                else:
+                                        corr_flag = str(0)
+                                
+                                human.append({'type':type,'state':state,'labeler':labeler,'prod':prod,'size':size,'inv_qtr':inv_qtr,'util_qtr':util_qtr,'inv_num':inv_num,'ndc':ndc,'name':name,'ura':ura,'units':units,'claimed':claimed,'scripts':scripts,'medi_reimb':medi_reimb,'non_medi_reimb':non_medi_reimb,'total_reimb':total_reimb,'corr_flag':corr_flag})
+                                
+                                #~ split out acella into a file for each quarter
+                                if labeler == '42192':
+                                        if util_qtr in cmsd:
+                                                cmsd[util_qtr].append(rtype+state+labeler+prod+size+util_qtr+name+ura+units+claimed+scripts+medi_reimb+non_medi_reimb+total_reimb+corr_flag)
+                                        else:
+                                                cmsd[util_qtr] = [rtype+state+labeler+prod+size+util_qtr+name+ura+units+claimed+scripts+medi_reimb+non_medi_reimb+total_reimb+corr_flag]
+                                
+                                if len(rtype+state+labeler+prod+size+util_qtr+name+ura+units+claimed+scripts+medi_reimb+non_medi_reimb+total_reimb+corr_flag) != 120:
+                                        raise ValueError('length is not correct')
+                                
+                                cms.append(rtype+state+labeler+prod+size+util_qtr+name+ura+units+claimed+scripts+medi_reimb+non_medi_reimb+total_reimb+corr_flag)
+
+                except Exception as e:
+                        errors.append('row #: '+str(row)+' error: '+str(e)+' '+r)
+
+        print state, type, rtype, inv_qtr, util_qtr
+        
+        if errors:
+                with open('F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\4 - cms_format\\%s_%s_%s_%s_errors.txt'%(inv_qtr,labeler,state,type), 'wb') as output_file:
+                        for r in errors:
+                                output_file.write(r + '\r\n')
+        
+        inv_header = ['type','state','labeler','prod','size','inv_qtr','util_qtr','inv_num','ndc','name','ura','units','claimed','scripts','medi_reimb','non_medi_reimb','total_reimb','corr_flag']
+        with open('F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\4 - cms_format\\%s_%s_%s_%s_csv.txt'%(inv_qtr,labeler,state,type), 'wb') as output_file:
+                dict_writer = csv.DictWriter(output_file, inv_header)
+                dict_writer.writeheader()
+                dict_writer.writerows(human)
+        
+        if labeler == '42192':
+                for k,v in cmsd.iteritems():
+                        qtr = k[1:5]+"Q"+k[:1]
+                        with open('F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\4 - cms_format\\%s_%s_%s_%s_data.txt'%(qtr,labeler,state,type), 'wb') as output_file:
+                                for r in v:
+                                        output_file.write(r + '\r\n')
+        else:
+                with open('F:\\sharefile\\Shared Folders\\mft\\out\\medicaid\\4 - cms_format\\%s_%s_%s_%s_cms.txt'%(inv_qtr,labeler,state,type), 'wb') as output_file:
+                        for r in cms:
+                                output_file.write(r + '\r\n')
+        print datetime.datetime.now()

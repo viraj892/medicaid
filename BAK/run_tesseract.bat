@@ -1,0 +1,1 @@
+for %%i in (*.png) do tesseract %%i %%i -psm 6 letters

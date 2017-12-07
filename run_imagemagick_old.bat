@@ -1,0 +1,1 @@
+magick -density 300 -units pixelsperinch %1 -enhance -enhance -sharpen 0x1.0 -gamma 0.5 %2

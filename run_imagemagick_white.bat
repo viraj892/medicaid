@@ -1,0 +1,1 @@
+magick -density 300 %1 -white-threshold 70%% -fill white -gamma 0.5 -sharpen 0x1.0 -enhance -contrast-stretch 0 %2

@@ -1,0 +1,1 @@
+2017-10-05 21:45:13.664000 VA MMCO MCOU 22010 - Total rows: 649, Detail rows: 250, Error rows: 10Technical Errors:240, Total Error percentage: 4.0%

@@ -1,0 +1,6 @@
+in_process/
+parser_logs/
+raw_text/
+secure_form_input/
+test/
+*.zip
