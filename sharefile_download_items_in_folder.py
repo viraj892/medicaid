@@ -23,3 +23,5 @@ cursor.close()
 con.close()
 
 sf.download_all_items_in_folder(access_token, folder_path, local_path)
+
+print 'Time elapsed: ' + str(time.clock() - start)
