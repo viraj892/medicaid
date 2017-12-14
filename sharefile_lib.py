@@ -476,7 +476,7 @@ def create_folder_by_path(token, folder_path, description=""):
             folder = stack.pop()
 
             # print 'folder=' + str(folder)
-            print '=============creating folder: ' + intermediate_parent_folder + '/' + folder
+            print 'creating folder: ' + intermediate_parent_folder + '/' + folder
             create_folder(token, intermediate_parent_id, folder, description='')
             intermediate_parent_folder = intermediate_parent_folder + '/' + folder
             intermediate_parent_id = get_item_by_path_refined(token, intermediate_parent_folder)

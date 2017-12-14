@@ -426,7 +426,7 @@ for row in lines:
             # add dummy value to pq of covenant stacked type invoice
             if logic['notes']:
                 print stacked_covenant_type
-                if 'covenant' in str(logic['notes']) and stacked_covenant_type:
+                if 'covenant' in str(logic['notes']) and prior_qtr_flag == 'y':
                     # print 'True1'
                     if logic['pq_exp_col']:
                         # print 'True2'
