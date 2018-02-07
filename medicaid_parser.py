@@ -230,7 +230,12 @@ for row in lines:
             row_clean = row_clean.replace('MCOU', '').replace('MMCO', '').replace('MCO', '')
 
         # row_clean = row_clean.replace('O', '0')
-        # Checking URA/pq_URA and NDC/pq_NDC existence to determine if row_clean is a detail row or not
+
+        if 'REXULTI' in str(row_clean):
+            res_index = str(row_clean).index('REXULTI') + 7
+            if row_clean[res_index + 2].isdigit() and row_clean[res_index + 3] == '.':
+                row_clean = row_clean[:res_index] + row_clean[res_index + 4]
+
         if ' . ' in row_clean:
             row_clean = row_clean.replace(' . ', ' ')
         if ' .' in row_clean:
@@ -243,7 +248,7 @@ for row in lines:
             row_clean = row_clean.replace(' ,', ',')
 
         row_clean = row_clean.replace('O', '0').replace('()', '0')
-
+        # Checking URA/pq_URA and NDC/pq_NDC existence to determine if row_clean is a detail row or not
         if prior_qtr_flag == 'n':
             if logic['ura_length']:
                 length = int(logic['ura_length'])
@@ -454,7 +459,10 @@ for row in lines:
 
             # quality check - ndc field
             if len(str(ndc).strip().replace('-', '')) != 11:
-                raise MyException('ndc is not 11 characters, possible OCR misread, please review')
+                if (len(str(ndc)) == 6 and '020' in str(ndc)) or ',' in str(ndc):
+                    raise Exception('Ignore this line')
+                else:
+                    raise MyException('ndc is not 11 characters, possible OCR misread, please review')
             if not str(ndc).strip().replace('-', '').isdigit():
                 raise MyException('ndc has non-numeric characters, possible OCR misread, please review')
 

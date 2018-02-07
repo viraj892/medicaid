@@ -280,6 +280,7 @@ def get_item_by_path_refined(token, path):
         found = True
     except KeyError:
         print 'item path not found'
+        print 'Did not find path: %s' % path
         found = False
     if found:
         return item
@@ -339,6 +340,7 @@ def download_item_by_path(token, src_file, dest_file):
 def download_all_items_in_folder(token, folder_path, local_path):
     item_ids = get_children_id_by_path(token, folder_path)
 
+
     local_path_zip = local_path + '\\files.zip'
     for item_id in item_ids:
         item = get_item_by_id(token, item_id)
@@ -378,7 +380,7 @@ def get_children_id_by_path(token, parent_folder):
     :param parent_folder: absolute Sharefile path to the parent directory
     :return: list of items ids of the children of parent folder
     """
-    return get_children_id(token, get_item_by_path(token, parent_folder))
+    return get_children_id(token, get_item_by_path_refined(token, parent_folder))
 
 
 def delete_item(token, item_id):
